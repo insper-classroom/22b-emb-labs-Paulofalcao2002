@@ -205,6 +205,31 @@ void _pio_set_output(Pio *p_pio, const uint32_t ul_mask,const uint32_t ul_defaul
 	_pio_pull_up(p_pio, ul_mask, ul_pull_up_enable);
 }
 
+/**
+ * \brief Return 1 if one or more PIOs of the given Pin instance currently have
+ * a high level; otherwise returns 0. This method returns the actual value that
+ * is being read on the pin. To return the supposed output value of a pin, use
+ * pio_get_output_data_status() instead.
+ *
+ * \param p_pio Pointer to a PIO instance.
+ * \param ul_type PIO type.
+ * \param ul_mask Bitmask of one or more pin(s) to configure.
+ *
+ * \retval 1 at least one PIO currently has a high level.
+ * \retval 0 all PIOs have a low level.
+ */
+uint32_t _pio_get(Pio *p_pio, const pio_type_t ul_type,
+        const uint32_t ul_mask)
+{
+	if (ul_type == PIO_INPUT){
+		int valorDoPIO = p_pio->PIO_PDSR;
+		return ul_mask & valorDoPIO;
+	} else {
+		int valorDoPIO = p_pio->PIO_ODSR;
+		return ul_mask & valorDoPIO;
+	}
+	
+}
 
 // Função de inicialização do uC
 void init(void)
@@ -272,7 +297,7 @@ int main(void)
   while (1)
   {
 	  _pio_set(LED_PIO, LED_PIO_IDX_MASK);  
-	  int valorBtn = pio_get(BUT_PIO, PIO_INPUT, BUT_PIO_IDX_MASK);
+	  int valorBtn = _pio_get(BUT_PIO, PIO_INPUT, BUT_PIO_IDX_MASK);
 	  if (!valorBtn){
 		  for (int i = 0; i < 5; i++){
 			  _pio_clear(LED_PIO, LED_PIO_IDX_MASK); 
@@ -281,21 +306,21 @@ int main(void)
 			  delay_ms(500);
 		  }                 
 	  }  
-	  int valorBtn1 = pio_get(BTN1_PIO, PIO_INPUT, BTN1_IDX_MASK);
+	  int valorBtn1 = _pio_get(BTN1_PIO, PIO_INPUT, BTN1_IDX_MASK);
 	  if (!valorBtn1){
 		  _pio_clear(OLED1_PIO, OLED1_IDX_MASK);   // ligar o led se tiver apertado
 	  } else {
 		  _pio_set(OLED1_PIO, OLED1_IDX_MASK);        // desligar o led quando o btn não está apertado
 	  }
 	  
-	  int valorBtn2 = pio_get(BTN2_PIO, PIO_INPUT, BTN2_IDX_MASK);
+	  int valorBtn2 = _pio_get(BTN2_PIO, PIO_INPUT, BTN2_IDX_MASK);
 	  if (!valorBtn2){
 		  _pio_clear(OLED2_PIO, OLED2_IDX_MASK);   // ligar o led se tiver apertado
 	  } else {
 		  _pio_set(OLED2_PIO, OLED2_IDX_MASK);        // desligar o led quando o btn não está apertado
 	  }
 	  
-	  int valorBtn3 = pio_get(BTN3_PIO, PIO_INPUT, BTN3_IDX_MASK);
+	  int valorBtn3 = _pio_get(BTN3_PIO, PIO_INPUT, BTN3_IDX_MASK);
 	  if (!valorBtn3){
 		  _pio_clear(OLED3_PIO, OLED3_IDX_MASK);   // ligar o led se tiver apertado
 	  } else {
