@@ -1,6 +1,7 @@
 #include <asf.h>
 #include <math.h>
 #include "conf_board.h"
+#include "Fusion.h"
 
 #include "gfx_mono_ug_2832hsweg04.h"
 #include "gfx_mono_text.h"
@@ -14,14 +15,32 @@
 #define BUT_PIO_PIN 11
 #define BUT_PIO_PIN_MASK (1 << BUT_PIO_PIN)
 
+#define LED_PLACA_PIO           PIOC                 // periferico que controla o LED
+#define LED_PLACA_PIO_ID        ID_PIOC                  // ID do periférico PIOC (controla LED)
+#define LED_PLACA_PIO_IDX       8                    // ID do LED no PIO
+#define LED_PLACA_IDX_MASK  (1 << LED_PLACA_PIO_IDX)   // Mascara para CONTROLARMOS o LED
+
 #define LED_1_PIO PIOA
 #define LED_1_PIO_ID ID_PIOA
 #define LED_1_IDX 0
 #define LED_1_IDX_MASK (1 << LED_1_IDX)
 
+#define LED_2_PIO PIOC
+#define LED_2_PIO_ID ID_PIOC
+#define LED_2_IDX 30
+#define LED_2_IDX_MASK (1 << LED_2_IDX)
+
+#define LED_3_PIO PIOB
+#define LED_3_PIO_ID ID_PIOB
+#define LED_3_IDX 2
+#define LED_3_IDX_MASK (1 << LED_3_IDX)
+
 /** RTOS  */
 #define TASK_HOUSE_DOWN_STACK_SIZE                (1024*6/sizeof(portSTACK_TYPE))
 #define TASK_HOUSE_DOWN_STACK_PRIORITY            (tskIDLE_PRIORITY)
+
+#define TASK_ORIENTACAO_STACK_SIZE                (1024*6/sizeof(portSTACK_TYPE))
+#define TASK_ORIENTACAO_STACK_PRIORITY            (tskIDLE_PRIORITY)
 
 #define TASK_IMU_STACK_SIZE                (1024*6/sizeof(portSTACK_TYPE))
 #define TASK_IMU_STACK_PRIORITY            (tskIDLE_PRIORITY)
@@ -33,6 +52,8 @@ extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
 
 SemaphoreHandle_t xSemaphoreDown;
+QueueHandle_t xQueueORIENTACAO;
+enum orientacao {ESQUERDA, FRENTE, DIREITA};
 
 /** prototypes */
 void but_callback(void);
@@ -40,6 +61,7 @@ static void BUT_init(void);
 void mcu6050_i2c_bus_init(void);
 int8_t mcu6050_i2c_bus_write(uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint8_t cnt);
 int8_t mcu6050_i2c_bus_read(uint8_t dev_addr, uint8_t reg_addr, uint8_t *reg_data, uint8_t cnt);
+void io_init(void);
 
 /************************************************************************/
 /* RTOS application funcs                                               */
@@ -70,24 +92,43 @@ void but_callback(void) {
 /************************************************************************/
 
 static void task_house_down(void *pvParameters) {
-	pmc_enable_periph_clk(LED_1_PIO_ID);
-	pio_configure(LED_1_PIO, PIO_OUTPUT_0, LED_1_IDX_MASK, PIO_DEFAULT);
-	pio_set(LED_1_PIO, LED_1_IDX_MASK);
 
 	for (;;)  {
 		if (xSemaphoreTake(xSemaphoreDown, 1)) {
 			printf("Cai \n");
 
-			pio_clear(LED_1_PIO, LED_1_IDX_MASK);
+			pio_clear(LED_PLACA_PIO, LED_PLACA_IDX_MASK);
 			vTaskDelay(100);
-			pio_set(LED_1_PIO, LED_1_IDX_MASK);
+			pio_set(LED_PLACA_PIO, LED_PLACA_IDX_MASK);
 		}
 
 	}
 }
 
+static void task_orientacao(void *pvParameters) {
+
+	pio_clear(LED_2_PIO, LED_2_IDX_MASK);
+	enum orientacao o;
+	for(;;) {
+		if (xQueueReceive(xQueueORIENTACAO, &o, 100)) {
+			pio_set(LED_1_PIO, LED_1_IDX_MASK);
+			pio_set(LED_2_PIO, LED_2_IDX_MASK);
+			pio_set(LED_3_PIO, LED_3_IDX_MASK);
+			if (o == 0) {
+				pio_clear(LED_1_PIO, LED_1_IDX_MASK);
+			} else if (o == 1) {
+				pio_clear(LED_2_PIO, LED_2_IDX_MASK);
+			} else if (o == 2) {
+				pio_clear(LED_3_PIO, LED_3_IDX_MASK);
+			}
+		}
+	}
+
+}
+
 static void task_imu(void *pvParameters) {
 	mcu6050_i2c_bus_init();
+	io_init();
 
 	/* buffer para recebimento de dados */
 	uint8_t bufferRX[10];
@@ -135,6 +176,16 @@ static void task_imu(void *pvParameters) {
 	volatile uint8_t  raw_gyr_xHigh, raw_gyr_yHigh, raw_gyr_zHigh;
 	volatile uint8_t  raw_gyr_xLow,  raw_gyr_yLow,  raw_gyr_zLow;
 	float proc_gyr_x, proc_gyr_y, proc_gyr_z;
+
+	/* Inicializa Função de fusão */
+	FusionAhrs ahrs;
+	FusionAhrsInitialise(&ahrs); 
+
+	enum orientacao o;
+	enum orientacao n_o;
+
+	o = FRENTE;
+	n_o = ESQUERDA;
 
 	while(1) {
 		// Le valor do acc X High e Low
@@ -188,16 +239,59 @@ static void task_imu(void *pvParameters) {
 
 		// printf("modulo aceleracao em m/s^2: %f\n", modulo);
 		// uma amostra a cada 1ms
-		if (modulo < 5.6) {
+		if (modulo < 6.5) {
 			xSemaphoreGive(xSemaphoreDown);
 		}
-		vTaskDelay(1);
+		vTaskDelay(100);
+
+		const FusionVector gyroscope = {proc_gyr_x, proc_gyr_y, proc_gyr_z}; 
+		const FusionVector accelerometer = {proc_acc_x, proc_acc_y, proc_acc_z};   
+
+		// Tempo entre amostras
+		float dT = 0.1;
+
+		// aplica o algoritmo
+		FusionAhrsUpdateNoMagnetometer(&ahrs, gyroscope, accelerometer, dT);
+
+		// dados em pitch roll e yaw
+		const FusionEuler euler = FusionQuaternionToEuler(FusionAhrsGetQuaternion(&ahrs));
+
+		// printf("Roll %0.1f, Pitch %0.1f, Yaw %0.1f\n", euler.angle.roll, euler.angle.pitch, euler.angle.yaw);
+
+		if(euler.angle.yaw > -10 && euler.angle.yaw < 10){
+			n_o = FRENTE;
+		}else if(euler.angle.yaw < -10){
+			n_o = ESQUERDA;
+		}else if(euler.angle.yaw > 10 ){
+			n_o = DIREITA;
+		}
+		if (n_o != o) {
+			o = n_o;
+			xQueueSend(xQueueORIENTACAO, &o, 0);
+		}
+		
 	}
 }
 
 /************************************************************************/
 /* funcoes                                                              */
 /************************************************************************/
+
+void io_init(void) {
+	pmc_enable_periph_clk(LED_1_PIO_ID);
+	pmc_enable_periph_clk(LED_2_PIO_ID);
+	pmc_enable_periph_clk(LED_3_PIO_ID);
+	pmc_enable_periph_clk(LED_PLACA_PIO_ID);
+
+	pio_configure(LED_1_PIO, PIO_OUTPUT_0, LED_1_IDX_MASK, PIO_DEFAULT);
+	pio_configure(LED_2_PIO, PIO_OUTPUT_0, LED_2_IDX_MASK, PIO_DEFAULT);
+	pio_configure(LED_3_PIO, PIO_OUTPUT_0, LED_3_IDX_MASK, PIO_DEFAULT);
+	pio_configure(LED_PLACA_PIO, PIO_OUTPUT_0, LED_PLACA_IDX_MASK, PIO_DEFAULT);
+
+	pio_set(LED_1_PIO, LED_1_IDX_MASK);
+	pio_set(LED_3_PIO, LED_3_IDX_MASK);
+	pio_set(LED_PLACA_PIO, LED_PLACA_IDX_MASK);
+}
 
 static void configure_console(void) {
 	const usart_serial_options_t uart_serial_options = {
@@ -295,8 +389,16 @@ int main(void) {
 	if (xSemaphoreDown == NULL)
 		printf("falha em criar o semaforo \n");
 
+	xQueueORIENTACAO = xQueueCreate(100, sizeof(int));
+  	if (xQueueORIENTACAO == NULL)
+    	printf("falha em criar a queue xQueueADC \n");
+
 	/* Create task to control oled */
 	if (xTaskCreate(task_house_down, "house down", TASK_HOUSE_DOWN_STACK_SIZE, NULL, TASK_HOUSE_DOWN_STACK_PRIORITY, NULL) != pdPASS) {
+	  printf("Failed to create house down task\r\n");
+	}
+
+	if (xTaskCreate(task_orientacao, "orientacao", TASK_ORIENTACAO_STACK_SIZE, NULL, TASK_ORIENTACAO_STACK_PRIORITY, NULL) != pdPASS) {
 	  printf("Failed to create house down task\r\n");
 	}
 

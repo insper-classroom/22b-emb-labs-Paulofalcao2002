@@ -196,12 +196,15 @@ src/main.d src/main.o: ../src/main.c ../src/asf.h \
  ../src/ASF/common/services/twi/twihs_slave.h \
  ../src/ASF/sam/drivers/pio/pio_handler.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\math.h \
- ../src/config/conf_board.h ../src/oled/gfx_mono_ug_2832hsweg04.h \
- ../src/oled/ssd1306.h ../src/oled/gfx_mono.h \
- ../src/oled/gfx_mono_ug_2832hsweg04.h ../src/oled/gfx_mono_generic.h \
- ../src/oled/gfx_mono_framebuffer.h ../src/oled/gfx_mono_text.h \
- ../src/oled/sysfont.h ../src/config/conf_sysfont.h \
- ../src/oled/gfx_mono_text.h ../src/mcu6050.h
+ ../src/config/conf_board.h ../src/Fusion.h ../src/FusionAhrs.h \
+ ../src/FusionMath.h ../src/FusionAxes.h ../src/FusionCalibration.h \
+ ../src/FusionCompass.h ../src/FusionOffset.h \
+ ../src/oled/gfx_mono_ug_2832hsweg04.h ../src/oled/ssd1306.h \
+ ../src/oled/gfx_mono.h ../src/oled/gfx_mono_ug_2832hsweg04.h \
+ ../src/oled/gfx_mono_generic.h ../src/oled/gfx_mono_framebuffer.h \
+ ../src/oled/gfx_mono_text.h ../src/oled/sysfont.h \
+ ../src/config/conf_sysfont.h ../src/oled/gfx_mono_text.h \
+ ../src/mcu6050.h
 
 ../src/asf.h:
 
@@ -610,6 +613,20 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-none-eabi\include\math.h:
 
 ../src/config/conf_board.h:
+
+../src/Fusion.h:
+
+../src/FusionAhrs.h:
+
+../src/FusionMath.h:
+
+../src/FusionAxes.h:
+
+../src/FusionCalibration.h:
+
+../src/FusionCompass.h:
+
+../src/FusionOffset.h:
 
 ../src/oled/gfx_mono_ug_2832hsweg04.h:
 
