@@ -153,6 +153,20 @@ void TC3_Handler(void) {
   	xQueueSendFromISR(xQueueHandlers, &id, &xHigherPriorityTaskWoken);
 }
 
+void TC6_Handler(void) {
+	/**
+	* Devemos indicar ao TC que a interrupção foi satisfeita.
+	* Isso é realizado pela leitura do status do periférico
+	**/
+	volatile uint32_t status = tc_get_status(TC2, 0);
+	// printf("Handler\n");
+
+	// Manda pra queue o id do Handler TC0
+	int id = 5;
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  	xQueueSendFromISR(xQueueHandlers, &id, &xHigherPriorityTaskWoken);
+}
+
 void RTT_Handler(void) {
 	uint32_t ul_status;
 	ul_status = rtt_get_status(RTT);
@@ -226,7 +240,7 @@ static void task_oled(void *pvParameters) {
 	uint32_t current_hour, current_min, current_sec;
 
 	int led_3_on = 0;
-
+	int led3_RTC = 1;
 	escreve_hora();
 	for (;;)  {
 		if (xQueueReceive(xQueueHandlers, &id_handler, 100)) {
@@ -235,6 +249,7 @@ static void task_oled(void *pvParameters) {
 			} else if (id_handler == 1) {
 				pin_toggle(LED_1_PIO, LED_1_IDX_MASK);
 				if (led_3_on) {
+					// Aproveita do outro periodo para fazer o LED 3 piscar
 					pin_toggle(LED_3_PIO, LED_3_IDX_MASK);
 					led_3_on = 0;
 				}
@@ -246,14 +261,26 @@ static void task_oled(void *pvParameters) {
 				led_3_on = 1;
 			} else if (id_handler == 4) {
 				escreve_hora();
+			} else if (id_handler == 5) {
+				pin_toggle(LED_3_PIO, LED_3_IDX_MASK);
 			}
 		}
 
 		if (xQueueReceive(xQueueBTN, &id_BTN, 1)) {
-			if (id_BTN == 3) {
+			if (id_BTN == 1) {
+				TC_init(TC2, ID_TC6, 0, 6);
+				tc_start(TC2, 0);
+				led3_RTC = 0;
+			} else if (id_BTN == 3) {
+				if (!led3_RTC) {
+					led3_RTC = 1;
+					tc_stop(TC2, 0);
+					pio_set(LED_3_PIO, LED_3_IDX_MASK);
+				}
 				rtc_get_time(RTC, &current_hour, &current_min, &current_sec);
 				rtc_set_time_alarm(RTC, 1, current_hour, 1, current_min, 1, current_sec + 20);
 			}
+			
 		}
 		
 		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
