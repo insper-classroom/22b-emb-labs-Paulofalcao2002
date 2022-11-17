@@ -113,9 +113,9 @@ void but1_callback(void) {
 
 void but2_callback(void) {
   printf("but2 foi apertado\n");
-  int id = 2;
-  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-  xQueueSendFromISR(xQueueBTN, &id, &xHigherPriorityTaskWoken);
+//   int id = 2;
+//   BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+//   xQueueSendFromISR(xQueueBTN, &id, &xHigherPriorityTaskWoken);
 }
 
 void but3_callback(void) { 
@@ -240,7 +240,7 @@ static void task_oled(void *pvParameters) {
 	uint32_t current_hour, current_min, current_sec;
 
 	int led_3_on = 0;
-	int led3_RTC = 1;
+	int led3_TC = 0;
 	escreve_hora();
 	for (;;)  {
 		if (xQueueReceive(xQueueHandlers, &id_handler, 100)) {
@@ -252,6 +252,12 @@ static void task_oled(void *pvParameters) {
 					// Aproveita do outro periodo para fazer o LED 3 piscar
 					pin_toggle(LED_3_PIO, LED_3_IDX_MASK);
 					led_3_on = 0;
+
+					// Se o alarme foi crirado pelo BTN 1 muda para TC
+					if (led3_TC) {
+						TC_init(TC2, ID_TC6, 0, 6);
+						tc_start(TC2, 0);
+					}
 				}
 			} else if (id_handler == 2) {
 				pin_toggle(LED_2_PIO, LED_2_IDX_MASK);
@@ -267,20 +273,12 @@ static void task_oled(void *pvParameters) {
 		}
 
 		if (xQueueReceive(xQueueBTN, &id_BTN, 1)) {
-			if (id_BTN == 1) {
-				TC_init(TC2, ID_TC6, 0, 6);
-				tc_start(TC2, 0);
-				led3_RTC = 0;
-			} else if (id_BTN == 3) {
-				if (!led3_RTC) {
-					led3_RTC = 1;
-					tc_stop(TC2, 0);
-					pio_set(LED_3_PIO, LED_3_IDX_MASK);
-				}
-				rtc_get_time(RTC, &current_hour, &current_min, &current_sec);
-				rtc_set_time_alarm(RTC, 1, current_hour, 1, current_min, 1, current_sec + 20);
-			}
+			rtc_get_time(RTC, &current_hour, &current_min, &current_sec);
+			rtc_set_time_alarm(RTC, 1, current_hour, 1, current_min, 1, current_sec + 20);
 			
+			if (id_BTN == 1) {
+				led3_TC = 1;
+			}
 		}
 		
 		pmc_sleep(SAM_PM_SMODE_SLEEP_WFI);
