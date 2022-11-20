@@ -2280,6 +2280,12 @@
     <Compile Include="src\ASF\thirdparty\lvgl8\tests\unity\unity_support.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\clock20.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\clock30.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\config\conf_touch.h">
       <SubType>compile</SubType>
     </Compile>

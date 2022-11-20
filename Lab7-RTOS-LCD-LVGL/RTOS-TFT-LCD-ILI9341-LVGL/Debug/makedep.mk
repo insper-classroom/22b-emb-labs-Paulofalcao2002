@@ -622,6 +622,10 @@ src\ASF\thirdparty\lvgl8\tests\unity\unity.c
 
 src\ASF\thirdparty\lvgl8\tests\unity\unity_support.c
 
+src\clock20.c
+
+src\clock30.c
+
 src\dseg30.c
 
 src\dseg40.c

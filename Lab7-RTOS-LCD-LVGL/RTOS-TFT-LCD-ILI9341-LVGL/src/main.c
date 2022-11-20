@@ -11,6 +11,9 @@
 LV_FONT_DECLARE(dseg70);
 LV_FONT_DECLARE(dseg50);
 LV_FONT_DECLARE(dseg30);
+LV_FONT_DECLARE(clock20);
+
+#define MY_SYMBOL_CLOCK "\xEF\x80\x97"
 
 /************************************************************************/
 /* LCD / LVGL                                                           */
@@ -26,8 +29,11 @@ static  lv_obj_t * labelConfig;
 static  lv_obj_t * labelUp;
 static  lv_obj_t * labelDown;
 static  lv_obj_t * labelFloor;
+static  lv_obj_t * labelDecimalFloor;
 static  lv_obj_t * labelSetValue;
 static  lv_obj_t * labelClock;
+static  lv_obj_t * labelAux1;
+static  lv_obj_t * labelAux2;
 
 typedef struct  {
   uint32_t year;
@@ -190,10 +196,11 @@ void lv_termostato(void) {
 	// config
     lv_obj_t * config = lv_btn_create(lv_scr_act());
     lv_obj_add_event_cb(config, config_handler, LV_EVENT_ALL, NULL);
-	lv_obj_align_to(config, menu, LV_ALIGN_RIGHT_MID, 30, -10);
+	lv_obj_align_to(config, menu, LV_ALIGN_RIGHT_MID, 40, -7);
 	lv_obj_add_style(config, &style, 0);
     labelConfig = lv_label_create(config);
-    lv_label_set_text(labelConfig, "|  " LV_SYMBOL_SETTINGS "  ]");
+	lv_obj_set_style_text_font(labelConfig, &clock20, LV_STATE_DEFAULT);
+    lv_label_set_text(labelConfig, MY_SYMBOL_CLOCK);
     lv_obj_center(labelConfig);
 
 	// DOWN
@@ -220,6 +227,14 @@ void lv_termostato(void) {
     lv_obj_set_style_text_font(labelFloor, &dseg70, LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(labelFloor, lv_color_white(), LV_STATE_DEFAULT);
     lv_label_set_text_fmt(labelFloor, "%02d", 23);
+	
+	// decimal floor
+	labelDecimalFloor = lv_label_create(lv_scr_act());
+    lv_obj_align_to(labelDecimalFloor, labelFloor, LV_ALIGN_RIGHT_MID, 50 , 20);
+    lv_obj_set_style_text_font(labelDecimalFloor, &dseg30, LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(labelDecimalFloor, lv_color_white(), LV_STATE_DEFAULT);
+    lv_label_set_text_fmt(labelDecimalFloor, ".%d", 4);
+	
 
 	// set value
 	labelSetValue = lv_label_create(lv_scr_act());
@@ -233,6 +248,18 @@ void lv_termostato(void) {
     lv_obj_align(labelClock, LV_ALIGN_TOP_RIGHT, -10 , 10);
     lv_obj_set_style_text_font(labelClock, &dseg30, LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(labelClock, lv_color_white(), LV_STATE_DEFAULT);
+
+	// AUX1
+	labelAux1 = lv_label_create(lv_scr_act());
+    lv_obj_align(labelAux1, LV_ALIGN_BOTTOM_LEFT, 110, -25);
+    lv_obj_set_style_text_color(labelAux1, lv_color_white(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelAux1, "|", 22);
+
+	// Aux2
+	labelAux2 = lv_label_create(lv_scr_act());
+    lv_obj_align(labelAux2, LV_ALIGN_BOTTOM_LEFT, 150, -25);
+    lv_obj_set_style_text_color(labelAux2, lv_color_white(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelAux2, "]", 22);
 
 
 }
