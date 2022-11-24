@@ -306,7 +306,7 @@ static void task_process(void *pvParameters) {
         if (status_led != NULL) {
           printf("ENTREI if\n");
           // depois de um post o char 0 ou 1 vem com ""
-          if (status_led[6] == '0' || status_led[7] == '0') {
+          if (status_led[6] == '1' || status_led[7] == '1') {
             pio_clear(LED_PIO, LED_PIO_IDX_MASK);
           } else {
             pio_set(LED_PIO, LED_PIO_IDX_MASK);
